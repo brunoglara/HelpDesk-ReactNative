@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "rockeatHelp",
+    "slug": "rockeatHelp",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}
