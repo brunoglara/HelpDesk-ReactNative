@@ -6,7 +6,7 @@ import Logo from "../assets/logo_primary.svg" //para reconhecer instalar yarn ad
 import { Input } from "../components/Input"
 import { Button } from "../components/Button"
 
-export default function SignIn() {
+export function SignIn() {
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
