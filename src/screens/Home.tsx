@@ -1,7 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HStack, IconButton, VStack, useTheme, Text, Heading, FlatList, Center } from 'native-base';
 import { SignOut, ChatTeardropText } from 'phosphor-react-native'
+import { Alert } from 'react-native';
 
+import { signOut } from 'firebase/auth'
+import {
+    collection,
+    onSnapshot,
+    query,
+    where,
+} from "firebase/firestore";
+import { auth, database } from "../config/firebaseConfig"
 
 import Logo from '../assets/logo_secondary.svg'
 
@@ -9,6 +18,8 @@ import { Filters } from '../components/Filters';
 import { Order, OrderProps } from '../components/Order';
 import { Button } from '../components/Button';
 import { useNavigation } from '@react-navigation/native';
+import { dateFormat } from '../utils/firestoreDateFormat';
+import { Loading } from '../components/Loading';
 
 export type RouteParamsDetails = {
     orderId: string
@@ -17,14 +28,9 @@ export type RouteParamsDetails = {
 export function Home() {
 
     const [statusSelected, setStatusSelected] = useState<'open' | 'closed'>('open')
-    const [orders, setOrders] = useState<OrderProps[]>([
-        {
-            id: '15',
-            inventory: '1234',
-            when: '18/07/2022',
-            status: 'open'
-        }
-    ])
+    const [orders, setOrders] = useState<OrderProps[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+
 
     const navigation = useNavigation()
 
@@ -36,8 +42,44 @@ export function Home() {
         navigation.navigate('Details', { orderId })
     }
 
+    function handleLogout() {
+        // const auth = getAuth(app);
+        signOut(auth).then(() => {
+            // Sign-out successful.
+        }).catch((error) => {
+            console.log(error)
+            return Alert.alert("Logout", "Logout failed")
+        });
+    }
 
     const { colors } = useTheme()
+
+
+    useEffect(() => {
+        setIsLoading(true)
+
+        // const database = getFirestore(app)
+
+        const q = query(collection(database, "orders"), where("status", "==", statusSelected))
+
+
+        onSnapshot(q, (querySnapshot) => {
+            const list: OrderProps[] = []
+            const subscribe = querySnapshot.docs.map((doc) => {
+                const { inventory, description, status, created_at } = doc.data()
+                list.push({
+                    id: doc.id,
+                    inventory,
+                    description,
+                    status,
+                    when: dateFormat(created_at)
+                } as OrderProps)
+            });
+            setOrders(list)
+            setIsLoading(false)
+            return subscribe
+        })
+    }, [statusSelected])
 
     return (
         <VStack flex={1} pb={6} bg={'gray.700'}>
@@ -54,6 +96,7 @@ export function Home() {
 
                 <IconButton
                     icon={<SignOut size={26} color={colors.gray[300]} />}
+                    onPress={handleLogout}
                 />
             </HStack>
 
@@ -84,28 +127,32 @@ export function Home() {
                     />
                 </HStack>
 
-                <FlatList
-                    data={orders}
-                    keyExtractor={(item => item.id)}
-                    renderItem={({ item }) => {
-                        return (
-                            <Order data={item} onPress={() => handleOpenDetails(item.id)} />
-                        )
-                    }}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 100 }}
-                    ListEmptyComponent={() => (
-                        <Center>
-                            <ChatTeardropText color={colors.gray[300]} size={40} />
-                            <Text color='gray.300' fontSize='xl' mt={6} textAlign='center'>
-                                You don't have {'\n'}
-                                requests {statusSelected === 'open' ? 'in progress' : 'completed'}
+                {
+                    isLoading
+                        ? <Loading />
+                        :
+                        <FlatList
+                            data={orders}
+                            keyExtractor={(item => item.id)}
+                            renderItem={({ item }) => {
+                                return (
+                                    <Order data={item} onPress={() => handleOpenDetails(item.id)} />
+                                )
+                            }}
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ paddingBottom: 100 }}
+                            ListEmptyComponent={() => (
+                                <Center>
+                                    <ChatTeardropText color={colors.gray[300]} size={40} />
+                                    <Text color='gray.300' fontSize='xl' mt={6} textAlign='center'>
+                                        You don't have {'\n'}
+                                        requests {statusSelected === 'open' ? 'in progress' : 'completed'}
 
-                            </Text>
-                        </Center>
-                    )}
-                />
-
+                                    </Text>
+                                </Center>
+                            )}
+                        />
+                }
                 <Button title='New Request' onPress={handleNewOrder} />
             </VStack>
 

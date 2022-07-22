@@ -12,8 +12,23 @@ module.exports = (() => {
     config.resolver = {
         ...resolver,
         assetExts: resolver.assetExts.filter((ext) => ext !== "svg"),
-        sourceExts: [...resolver.sourceExts, "svg"],
+        sourceExts: [...resolver.sourceExts, "svg", 'jsx', 'js', 'ts', 'tsx', 'cjs'],
     };
 
     return config;
 })();
+
+// module.exports = {
+//     transformer: {
+//         getTransformOptions: async () => ({
+//             transform: {
+//                 experimentalImportSupport: false,
+//                 inlineRequires: true,
+//             },
+//         }),
+//     },
+//     //added this
+//     resolver: {
+//         sourceExts: ['jsx', 'js', 'ts', 'tsx', 'cjs'],
+//     },
+// };
