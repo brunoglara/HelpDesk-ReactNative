@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
@@ -10,9 +10,12 @@ import { Input } from '../components/Input';
 
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { database } from "../config/firebaseConfig"
+import { AuthContext } from '../contexts/auth';
 
 
 export function Register() {
+    const { userId } = useContext(AuthContext)
+
     const [isLoading, setIsLoading] = useState(false)
     const [inventory, setInventory] = useState('')
     const [description, setDescription] = useState('')
@@ -26,15 +29,17 @@ export function Register() {
 
         setIsLoading(true)
 
-        await addDoc(collection(database, "orders"), {
+        const subscribe = await addDoc(collection(database, "orders"), {
             inventory,
             description,
             status: 'open',
-            created_at: serverTimestamp()
+            created_at: serverTimestamp(),
+            userId
         })
             .then(() => {
-                Alert.alert("Register", "Successfully registered")
                 navigation.goBack()
+                return subscribe
+
             })
             .catch(error => {
                 setIsLoading(false)

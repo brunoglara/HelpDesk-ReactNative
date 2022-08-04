@@ -4,6 +4,7 @@ export declare global {
             Home: undefined
             Register: undefined
             Details: { orderId: string }
+            UserRegister: undefined
         }
     }
 }

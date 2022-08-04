@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 
 import { HStack, Text, VStack, useTheme, ScrollView } from 'native-base';
 import { Header } from '../components/Header';
@@ -10,7 +10,7 @@ import {
     doc,
     getDoc,
     serverTimestamp,
-    updateDoc
+    setDoc
 } from "firebase/firestore";
 import { database } from "../config/firebaseConfig"
 
@@ -21,6 +21,7 @@ import { CardDetails } from '../components/CardDetails';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { Alert } from 'react-native';
+import { AuthContext } from '../contexts/auth';
 
 
 
@@ -30,6 +31,8 @@ type OrderDetails = OrderProps & {
 }
 
 export function Details() {
+    const { userId, userType } = useContext(AuthContext)
+
     const [isLoading, setIsLoading] = useState(true)
     const [solution, setSolution] = useState('')
     const [order, setOrder] = useState<OrderDetails>({} as OrderDetails)
@@ -56,9 +59,12 @@ export function Details() {
             status,
             solution,
             when: dateFormat(created_at),
-            closed
+            closed,
+            userId
         })
         setIsLoading(false)
+
+        return docSnap
     }
 
     async function handleOrderClose() {
@@ -67,18 +73,20 @@ export function Details() {
         }
 
         setIsLoading(true)
-
-        await updateDoc(doc(database, 'orders', orderId), {
-            status: 'closed',
-            solution,
-            closed_at: serverTimestamp()
-        })
-            .then(() => {
-                navigation.goBack()
-            })
-            .catch(error => {
-                Alert.alert('Close request', "Could not close request")
-            })
+        try {
+            const subscribe = await setDoc(doc(database, 'orders', orderId), {
+                status: 'closed',
+                solution,
+                closed_at: serverTimestamp()
+            }, { merge: true })
+            return subscribe
+        }
+        catch (error) {
+            Alert.alert('Close request', "Could not close request")
+        } finally {
+            navigation.goBack()
+            setIsLoading(false)
+        }
     }
 
     useEffect(() => {
@@ -134,7 +142,7 @@ export function Details() {
                                 footer={order.closed && `Completed at ${order.closed}`}
                             >
                                 {
-                                    order.status === 'open' &&
+                                    order.status === 'open' && userType !== 'requester' &&
                                     <Input
                                         placeholder='Solution description'
                                         onChangeText={setSolution}

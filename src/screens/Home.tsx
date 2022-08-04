@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { HStack, IconButton, VStack, useTheme, Text, Heading, FlatList, Center } from 'native-base';
 import { SignOut, ChatTeardropText } from 'phosphor-react-native'
 import { Alert } from 'react-native';
@@ -20,15 +20,20 @@ import { Button } from '../components/Button';
 import { useNavigation } from '@react-navigation/native';
 import { dateFormat } from '../utils/firestoreDateFormat';
 import { Loading } from '../components/Loading';
+import { AuthContext } from '../contexts/auth';
 
 export type RouteParamsDetails = {
     orderId: string
 }
 
 export function Home() {
+    const { userId, setUserId, userType, setUserType } = useContext(AuthContext)
+
 
     const [statusSelected, setStatusSelected] = useState<'open' | 'closed'>('open')
-    const [orders, setOrders] = useState<OrderProps[]>([])
+    const [ordersOpen, setOrdersOpen] = useState<OrderProps[]>([])
+    const [ordersClose, setOrdersClose] = useState<OrderProps[]>([])
+
     const [isLoading, setIsLoading] = useState(true)
 
 
@@ -39,33 +44,36 @@ export function Home() {
     }
 
     function handleOpenDetails(orderId: string) {
+        // setOrders([])
         navigation.navigate('Details', { orderId })
     }
 
     function handleLogout() {
-        // const auth = getAuth(app);
-        signOut(auth).then(() => {
-            // Sign-out successful.
+
+        const subscribe = signOut(auth).then(() => {
+            setUserId('')
+            setUserType(null)
         }).catch((error) => {
             console.log(error)
             return Alert.alert("Logout", "Logout failed")
         });
+
+        return subscribe
     }
 
-    const { colors } = useTheme()
+    function getOrders() {
+        let q
+        if (userType === "admin" || userType === "solver") {
+            q = query(collection(database, "orders"), where("status", "==", statusSelected))
+        } else {
+            q = query(collection(database, "orders"), where("status", "==", statusSelected), where('userId', '==', userId))
+        }
 
 
-    useEffect(() => {
-        setIsLoading(true)
-
-        // const database = getFirestore(app)
-
-        const q = query(collection(database, "orders"), where("status", "==", statusSelected))
-
-
-        onSnapshot(q, (querySnapshot) => {
+        const subscribe = onSnapshot(q, (querySnapshot) => {
+            setIsLoading(true)
             const list: OrderProps[] = []
-            const subscribe = querySnapshot.docs.map((doc) => {
+            querySnapshot.docs.map((doc) => {
                 const { inventory, description, status, created_at } = doc.data()
                 list.push({
                     id: doc.id,
@@ -75,11 +83,21 @@ export function Home() {
                     when: dateFormat(created_at)
                 } as OrderProps)
             });
-            setOrders(list)
+            statusSelected === 'open' ? setOrdersOpen(list) : setOrdersClose(list)
             setIsLoading(false)
             return subscribe
         })
-    }, [statusSelected])
+    }
+
+    const { colors } = useTheme()
+
+
+    useEffect(() => {
+
+        if (userType !== null) {
+            getOrders()
+        }
+    }, [statusSelected, userId, userType])
 
     return (
         <VStack flex={1} pb={6} bg={'gray.700'}>
@@ -106,7 +124,7 @@ export function Home() {
                         Requests
                     </Heading>
                     <Text color="gray.200" fontSize='xl'>
-                        {orders.length}
+                        {statusSelected === 'open' ? ordersOpen.length : ordersClose.length}
                     </Text>
                 </HStack>
 
@@ -132,7 +150,7 @@ export function Home() {
                         ? <Loading />
                         :
                         <FlatList
-                            data={orders}
+                            data={statusSelected === 'open' ? ordersOpen : ordersClose}
                             keyExtractor={(item => item.id)}
                             renderItem={({ item }) => {
                                 return (

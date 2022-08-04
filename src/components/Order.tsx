@@ -7,6 +7,7 @@ export type OrderProps = {
     inventory: string,
     when: string,
     status: 'open' | 'closed'
+    userId: string
 }
 
 type Props = IPressableProps & {

@@ -5,21 +5,24 @@ import { THEME } from './src/styles/theme'
 
 import { Routes } from './src/routes';
 import { Loading } from './src/components/Loading';
+import AuthProvider from './src/contexts/auth';
 
 export default function App() {
   //Carregamento de fonts
   const [fontsLoaded] = useFonts({ Roboto_400Regular, Roboto_700Bold })
 
   return (
-    <NativeBaseProvider theme={THEME}>
-      <StatusBar
-        barStyle='light-content'
-        backgroundColor='transparent'
-        translucent={true}
-      />
+    <AuthProvider>
+      <NativeBaseProvider theme={THEME}>
+        <StatusBar
+          barStyle='light-content'
+          backgroundColor='transparent'
+          translucent={true}
+        />
 
-      {fontsLoaded ? <Routes /> : <Loading />}
-    </NativeBaseProvider>
+        {fontsLoaded ? <Routes /> : <Loading />}
+      </NativeBaseProvider>
+    </AuthProvider>
   );
 }
 
